@@ -13,6 +13,7 @@ void DaikinClimate::transmit_state() {
 
   remote_state[21] = this->operation_mode_();
   remote_state[24] = this->fan_speed_();
+  remote_state[25] = this->swing_mode_horizontal_();
   remote_state[22] = this->temperature_();
 
   // Calculate checksum
@@ -102,13 +103,25 @@ uint8_t DaikinClimate::fan_speed_() {
     case climate::CLIMATE_FAN_HIGH:
       fan_speed = DAIKIN_FAN_5;
       break;
+    case climate::CLIMATE_FAN_DIFFUSE:
+      fan_speed = DAIKIN_FAN_QUIET;
+      break;
     case climate::CLIMATE_FAN_AUTO:
     default:
       fan_speed = DAIKIN_FAN_AUTO;
   }
 
   // If swing is enabled switch first 4 bits to 1111
-  return this->swing_mode == climate::CLIMATE_SWING_VERTICAL ? fan_speed | 0xF : fan_speed;
+  return (this->swing_mode == climate::CLIMATE_SWING_VERTICAL || this->swing_mode == climate::CLIMATE_SWING_BOTH) ? fan_speed | 0xF : fan_speed;
+}
+
+uint8_t DaikinClimate::swing_mode_horizontal_() {
+  uint8_t swing_mode;
+  if (this->swing_mode == climate::CLIMATE_SWING_BOTH || this->swing_mode == climate::CLIMATE_SWING_HORIZONTAL)
+      swing_mode = DAIKIN_SWING_HORIZONTAL;
+  else
+      swing_mode = 0x00;
+  return swing_mode;
 }
 
 uint8_t DaikinClimate::temperature_() {
@@ -159,8 +172,13 @@ bool DaikinClimate::parse_state_frame_(const uint8_t frame[]) {
     this->target_temperature = temperature >> 1;
   }
   uint8_t fan_mode = frame[8];
-  if (fan_mode & 0xF)
+  uint8_t swing_mode_horizontal = frame[9];
+  if (fan_mode & 0xF && swing_mode_horizontal & 0x0F)
+    this->swing_mode = climate::CLIMATE_SWING_BOTH;
+  else if (fan_mode & 0xF)
     this->swing_mode = climate::CLIMATE_SWING_VERTICAL;
+  else if (swing_mode_horizontal & 0x0F)
+    this->swing_mode = climate::CLIMATE_SWING_HORIZONTAL;
   else
     this->swing_mode = climate::CLIMATE_SWING_OFF;
   switch (fan_mode & 0xF0) {
@@ -177,6 +195,9 @@ bool DaikinClimate::parse_state_frame_(const uint8_t frame[]) {
       break;
     case DAIKIN_FAN_AUTO:
       this->fan_mode = climate::CLIMATE_FAN_AUTO;
+      break;
+    case DAIKIN_FAN_QUIET:
+      this->fan_mode = climate::CLIMATE_FAN_DIFFUSE;
       break;
   }
   this->publish_state();
