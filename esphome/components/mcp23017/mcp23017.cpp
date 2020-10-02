@@ -14,9 +14,21 @@ void MCP23017::setup() {
     return;
   }
 
-  // all pins input
-  this->write_reg_(MCP23017_IODIRA, 0xFF);
-  this->write_reg_(MCP23017_IODIRB, 0xFF);
+  // restore last output pins
+  if(!this->read_reg_(MCP23017_OLATA, &olat_a_))
+    olat_a_ = 0x0;
+  if(!this->read_reg_(MCP23017_OLATB, &olat_b_))
+    olat_b_ = 0x0;
+  
+  // restore last input pins
+  uint8_t iodir_a;
+  uint8_t iodir_b;
+  if(!this->read_reg_(MCP23017_IODIRA, &iodir_a))
+    iodir_a = 0xff;
+  if(!this->read_reg_(MCP23017_IODIRB, &iodir_b))
+    iodir_b = 0xff;
+  this->write_reg_(MCP23017_IODIRA, iodir_a);
+  this->write_reg_(MCP23017_IODIRB, iodir_b);
 }
 bool MCP23017::digital_read(uint8_t pin) {
   uint8_t bit = pin % 8;
