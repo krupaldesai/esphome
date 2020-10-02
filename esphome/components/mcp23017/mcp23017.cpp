@@ -16,17 +16,17 @@ void MCP23017::setup() {
 
   // restore last output pins
   if(!this->read_reg_(MCP23017_OLATA, &olat_a_))
-    olat_a_ = 0x0;
+    olat_a_ = 0x00;
   if(!this->read_reg_(MCP23017_OLATB, &olat_b_))
-    olat_b_ = 0x0;
-  
+    olat_b_ = 0x00;
+
   // restore last input pins
   uint8_t iodir_a;
   uint8_t iodir_b;
   if(!this->read_reg_(MCP23017_IODIRA, &iodir_a))
-    iodir_a = 0xff;
+    iodir_a = 0xFF;
   if(!this->read_reg_(MCP23017_IODIRB, &iodir_b))
-    iodir_b = 0xff;
+    iodir_b = 0xFF;
   this->write_reg_(MCP23017_IODIRA, iodir_a);
   this->write_reg_(MCP23017_IODIRB, iodir_b);
 }
